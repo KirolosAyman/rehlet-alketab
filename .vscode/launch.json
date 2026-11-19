@@ -1,0 +1,56 @@
+{
+  // Use "Run → Run Without Debugging" (Ctrl+F5) after choosing a configuration in the Run panel.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🌐 Web: dev server (opens browser)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "(https?://localhost:[0-9]+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "✅ Run all checks (lint · types · tests · build)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "check"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🧪 API unit tests (Node, no Deno needed)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:api"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "📦 Install web packages (first time only)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["install"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "☁️ Deploy Edge Function to Supabase",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "supabase", "functions", "deploy", "api", "--no-verify-jwt"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

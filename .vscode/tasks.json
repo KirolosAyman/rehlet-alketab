@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Web: dev server",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Run all checks",
+            "type": "shell",
+            "command": "npm run check",
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "API unit tests",
+            "type": "shell",
+            "command": "npm run test:api",
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

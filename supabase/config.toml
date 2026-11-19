@@ -1,0 +1,5 @@
+# Supabase CLI config. Set project_id with `supabase link`.
+project_id = "rehlet-alketab"
+
+[functions.api]
+verify_jwt = false
