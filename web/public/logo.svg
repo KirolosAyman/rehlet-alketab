@@ -1,1 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="31" fill="#7a4b1e"/><path d="M12 22c7-3 14-3 20 1v25c-6-4-13-4-20-1z" fill="#fff"/><path d="M52 22c-7-3-14-3-20 1v25c6-4 13-4 20-1z" fill="#fff" opacity=".9"/><path d="M32 9l2.4 5 5.4.7-4 3.7 1.1 5.4-4.9-2.7-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" fill="#ffc94a"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nou Oyini">
+  <defs>
+    <linearGradient id="no-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0cd85" />
+      <stop offset=".45" stop-color="#d3a54f" />
+      <stop offset="1" stop-color="#8f6a24" />
+    </linearGradient>
+    <linearGradient id="no-ivory" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff6e2" />
+      <stop offset=".6" stop-color="#f0dcb4" />
+      <stop offset="1" stop-color="#c9a260" />
+    </linearGradient>
+    <radialGradient id="no-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#f6c65f" stop-opacity=".55" />
+      <stop offset=".55" stop-color="#c9973c" stop-opacity=".16" />
+      <stop offset="1" stop-color="#c9973c" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="no-flare" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff7e0" stop-opacity=".95" />
+      <stop offset=".4" stop-color="#f7cd77" stop-opacity=".45" />
+      <stop offset="1" stop-color="#f7cd77" stop-opacity="0" />
+    </radialGradient>
+    <filter id="no-blur" x="-60%" y="-10%" width="220%" height="120%">
+      <feGaussianBlur stdDeviation="7" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="#070605" />
+  <circle cx="256" cy="262" r="186" fill="url(#no-glow)" opacity=".55" />
+
+  <!-- vertical light beam -->
+  <rect x="249" y="76" width="14" height="372" fill="#e9b955" opacity=".22" filter="url(#no-blur)" />
+  <rect x="253" y="76" width="6" height="372" fill="url(#no-ivory)" />
+  <rect x="255" y="76" width="2" height="372" fill="#fffaf0" opacity=".9" />
+
+  <!-- ring -->
+  <circle cx="256" cy="262" r="132" fill="none" stroke="url(#no-gold)" stroke-width="9" />
+
+  <!-- crescent -->
+  <path d="M256 144 A118 118 0 0 0 256 380 A86 118 0 0 1 256 144 Z" fill="url(#no-ivory)" />
+
+  <!-- light flare where the beam crosses the ring -->
+  <circle cx="256" cy="138" r="48" fill="url(#no-flare)" />
+  <path d="M256 104 L262 128 L292 138 L262 148 L256 172 L250 148 L220 138 L250 128 Z" fill="#fff4d8" />
+</svg>
