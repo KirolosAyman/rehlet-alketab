@@ -33,12 +33,43 @@ export function QuizResultsPage() {
   const essayIdx = quiz.questions.flatMap((q, i) => (q.type === 'essay' ? [i] : []));
   const hasPending = attempts.some((a) => a.essay.some((e) => e.status === 'pending'));
 
+  const exportCsv = () => {
+    const headers = ['اسم الطالب', 'الدرجة', 'الإجمالي', 'النسبة', 'النجوم'];
+    const rows = attempts.map((a) => [
+      `"${a.student.replace(/"/g, '""')}"`,
+      a.correct,
+      a.total,
+      `${Math.round((a.correct / (a.total || 1)) * 100)}%`,
+      a.stars,
+    ]);
+    const notTakenRows = notTaken.map((s) => [
+      `"${s.name.replace(/"/g, '""')}"`,
+      'لم يحل',
+      quiz.questions.length,
+      '0%',
+      0,
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(',')), ...notTakenRows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `نتائج_${quiz.book}_${quiz.chapter}_${quiz.quiz_date}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="font-scripture text-xl font-bold">{t.title}: {ar.chapter(quiz.book, quiz.chapter)}</h1>
-        <p className="text-sm text-muted">{fmtDate(quiz.quiz_date)}</p>
-        <Link to={`/admin/quizzes/${id}/edit`} className="btn btn-ghost btn-sm mt-1">{ar.admin.quizzes.edit}</Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-scripture text-xl font-bold">{t.title}: {ar.chapter(quiz.book, quiz.chapter)}</h1>
+          <p className="text-sm text-muted">{fmtDate(quiz.quiz_date)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/admin/quizzes/${id}/edit`} className="btn btn-ghost btn-sm">{ar.admin.quizzes.edit}</Link>
+          <Button small variant="secondary" onClick={exportCsv}>تصدير النتائج (CSV)</Button>
+        </div>
       </div>
 
       {attempts.length === 0 ? <EmptyState title={t.noAttempts} icon="⏳" /> : (

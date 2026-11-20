@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ar } from '../../i18n/ar';
@@ -34,6 +34,16 @@ function Writer({ a }: { a: MyAssignment }) {
   const locked = a.status !== 'open';
   const [qs, setQs] = useState<Question[]>(a.questions.length ? a.questions : [emptyQuestion()]);
   const [saved, setSaved] = useState('');
+
+  const isDirty = !locked && JSON.stringify(qs) !== JSON.stringify(a.questions.length ? a.questions : [emptyQuestion()]);
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
 
   const save = useMutation({
     mutationFn: (submit: boolean) => api<{ status: string }>('assign_save', { id: a.id, questions: qs, submit }),

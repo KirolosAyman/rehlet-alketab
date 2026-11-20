@@ -16,7 +16,7 @@
 | Security model | **Built** — service-role-only DB, hashed tokens/passwords, throttling, no answer leakage |
 | CI | **Built** — GitHub Actions jobs for web and Edge Function |
 | Live deployment proof | **Not verified** — checklist in `docs/VERIFICATION.md` is still unticked |
-| Product spec in repo | **Missing** — `docs/PROJECT.md` is a placeholder |
+| Product spec in repo | **Complete** — documented in `docs/PROJECT.md` |
 | E2E tests | **Not started** |
 
 **Verdict:** this is a complete MVP, not a skeleton. The biggest remaining gap is not missing features; it is **proof that the whole system works against the real Supabase + Gemini + hosting environment**, plus a small amount of production hardening.

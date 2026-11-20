@@ -235,8 +235,19 @@ export async function unlocksSet(ctx: Ctx) {
   const list = ids(ctx.body, 'student_ids');
   if (!must(await ctx.db.from('quizzes').select('id').eq('id', qid).maybeSingle(), 'unlocks.quiz')) throw notFound();
   must(await ctx.db.from('quiz_unlocks').delete().eq('quiz_id', qid), 'unlocks.clear');
-  if (list.length) must(await ctx.db.from('quiz_unlocks').insert(list.map((student_id) => ({ quiz_id: qid, student_id }))), 'unlocks.insert');
-  return { count: list.length };
+  if (list.length) {
+    const existing = must<{ id: string }[]>(
+      await ctx.db.from('students').select('id').in('id', list),
+      'unlocks.students',
+    );
+    const validIds = new Set(existing.map((s) => s.id));
+    const validList = list.filter((student_id) => validIds.has(student_id));
+    if (validList.length) {
+      must(await ctx.db.from('quiz_unlocks').insert(validList.map((student_id) => ({ quiz_id: qid, student_id }))), 'unlocks.insert');
+    }
+    return { count: validList.length };
+  }
+  return { count: 0 };
 }
 
 // ---------------- essay review ----------------

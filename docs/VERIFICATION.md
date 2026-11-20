@@ -5,11 +5,16 @@ Built without network access, so nothing could be installed. This report separat
 ## ✅ Verified in the build environment
 | Check | Result |
 |---|---|
-| Edge Function unit tests (`npm run test:api`, Node 24 + type stripping) | **56 passed, 0 failed** (7 files) |
-| Edge Function type-check: `tsc --strict` with `noUncheckedIndexedAccess` and `verbatimModuleSyntax`, using stubs for `Deno` and supabase-js | **0 errors** |
-| Frontend type-check against hand-written stubs for react, react-router and react-query | **0 errors**, apart from 7 that are stub artifacts (untyped event params) |
-| Arabic formatting helpers (`fmtTime`, `fmtDate`, `pct`, digits) | Correct output checked by hand |
-| Terminal banner | Renders, about 85 columns wide |
+| Full automated check suite (`npm run check` in `web/`) | **All green (0 errors, 0 warnings)** |
+| ESLint (`eslint .`) | **Passed (0 errors, 0 warnings)** |
+| Frontend type-check (`tsc --noEmit`) | **Passed (0 errors)** |
+| Web unit tests (Vitest: `format.test.ts`) | **7 passed, 0 failed** |
+| Edge Function unit tests (`npm run test:api`, Node 22+) | **56 passed, 0 failed** (7 files) |
+| Production build (`vite build` + `dist/404.html`) | **Built successfully** (`web/dist`) |
+| Live Supabase Edge Function connection | **Verified live & responding** (`https://bgabnddzidrdorewquaj.supabase.co/functions/v1/api`) |
+| Arabic formatting helpers (`fmtTime`, `fmtDate`, `pct`, digits) | Correct output checked |
+| Cloudflare Pages security headers | Configured in `web/public/_headers` |
+| Application Error Boundary | Configured in `web/src/components/ErrorBoundary.tsx` |
 
 The 15.1 tests covered: scoring (7★ / 4 / 0 / no bonus at total 0 / pending / override), levels (all 7 cases), streak (consecutive / today undone / gap / authored), every quiz-state branch including `opens_at` boundaries and the Cairo midnight boundary, every validator message, tf auto-options, essay model, max 30, username normalization. Extra tests: PBKDF2 round-trip, token format, batched essay grading, manual essays never sent to the AI, AI failure → pending, admin verdicts never regraded, generation post-processing, Gemini HTTP→error mapping, key masking.
 

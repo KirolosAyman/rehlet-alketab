@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ar } from '../../i18n/ar';
@@ -38,6 +38,16 @@ function Editor({ id, initial, author }: { id: string; initial: Form; author: st
   const [f, setF] = useState<Form>(initial);
   const [msg, setMsg] = useState('');
   const edit = (x: Form) => { setF(x); setMsg(''); };
+
+  const isDirty = JSON.stringify(f) !== JSON.stringify(initial);
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
 
   const save = useMutation({
     mutationFn: (status: 'draft' | 'published') =>

@@ -98,18 +98,20 @@ export async function adminLogin(ctx: Ctx) {
     console.error('[admin_login] ADMIN_PASSWORD secret is not set');
     throw new ApiError('server_config', 'كلمة سر الخادم مش متظبطة على السيرفر. راجع دليل الإعداد.', 500);
   }
-  await rateLimit(ctx.db, 'admin_login:' + (await ipKey(ctx.ip)), 20, 600);
-  const lock = await getSetting<AdminLock>(ctx.db, 'admin_lock', { failed: 0, until: null });
+  const ipH = await ipKey(ctx.ip);
+  await rateLimit(ctx.db, 'admin_login:' + ipH, 20, 600);
+  const lockKey = 'admin_lock:' + ipH;
+  const lock = await getSetting<AdminLock>(ctx.db, lockKey, { failed: 0, until: null });
   if (lock.until && lock.until > Date.now()) throw lockedErr(lock.until);
 
   if (!(await safeStringEqual(pw, secret))) {
     const failed = (lock.failed ?? 0) + 1;
     const locking = failed >= MAX_FAILS;
     const until = Date.now() + LOCK_MS;
-    await setSetting(ctx.db, 'admin_lock', locking ? { failed: 0, until } : { failed, until: null });
+    await setSetting(ctx.db, lockKey, locking ? { failed: 0, until } : { failed, until: null });
     throw locking ? lockedErr(until) : new ApiError('bad_credentials', 'كلمة السر مش صح.', 401);
   }
-  await setSetting(ctx.db, 'admin_lock', { failed: 0, until: null });
+  await setSetting(ctx.db, lockKey, { failed: 0, until: null });
   return { token: await createSession(ctx.db, null, true) };
 }
 
