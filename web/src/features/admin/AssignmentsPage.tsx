@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -34,18 +34,24 @@ function CreateForm({ data }: { data: Dashboard }) {
   const booksQ = useBooks();
   const allBooks = booksQ.data?.books ?? [];
   const initialBook = allBooks.find((b) => b.name === (data.quizzes[0]?.book ?? 'صموئيل الثاني')) ?? allBooks[0];
-  const [testament, setTestament] = useState<'old' | 'new'>(initialBook?.testament ?? 'old');
+  const [testament, setTestament] = useState<'old' | 'new'>('old');
   const [f, setF] = useState({
     student_id: '',
-    book: initialBook?.name ?? (data.quizzes[0]?.book ?? 'صموئيل الثاني'),
-    book_id: initialBook?.id ?? null as string | null,
+    book: '',
+    book_id: null as string | null,
     chapter: '',
     day: data.today,
   });
 
+  useEffect(() => {
+    if (f.book || !initialBook) return;
+    setTestament(initialBook.testament);
+    setF((curr) => ({ ...curr, book: initialBook.name, book_id: initialBook.id }));
+  }, [f.book, initialBook]);
+
   const testamentBooks = allBooks.filter((b) => b.testament === testament);
-  const selectedBook = allBooks.find((b) => b.name === f.book) ?? testamentBooks[0];
-  const maxChapters = selectedBook?.chapters ?? 50;
+  const selectedBook = allBooks.find((b) => b.id === f.book_id);
+  const maxChapters = selectedBook?.chapters ?? 0;
 
   const onTestamentChange = (newTestament: 'old' | 'new') => {
     setTestament(newTestament);
@@ -62,6 +68,10 @@ function CreateForm({ data }: { data: Dashboard }) {
 
   const create = useMutation({ mutationFn: () => api('admin_assign_create', f), onSuccess: () => { refresh(); setF({ ...f, chapter: '' }); } });
   const submit = (e: FormEvent) => { e.preventDefault(); create.mutate(); };
+  if (booksQ.isPending) return <Loading />;
+  if (booksQ.isError) return <ErrorBox error={booksQ.error} onRetry={() => booksQ.refetch()} />;
+  if (allBooks.length === 0) return <EmptyState title={ar.admin.books.empty} icon="📖" />;
+
   return (
     <Card>
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
@@ -76,12 +86,10 @@ function CreateForm({ data }: { data: Dashboard }) {
           <option value="new">{ar.testaments.new}</option>
         </Select>
         <Select label={ar.admin.editor.book} value={f.book} onChange={(e) => onBookChange(e.target.value)} required>
+          <option value="">{ar.admin.editor.chooseBook}</option>
           {testamentBooks.map((b) => (
             <option key={b.id} value={b.name}>{b.name}</option>
           ))}
-          {!testamentBooks.some((b) => b.name === f.book) && f.book && (
-            <option value={f.book}>{f.book}</option>
-          )}
         </Select>
         <Select label={ar.admin.editor.chapter} value={f.chapter} onChange={(e) => setF({ ...f, chapter: e.target.value })} required className="sm:col-span-2">
           <option value="">{ar.admin.editor.chooseChapter}</option>
