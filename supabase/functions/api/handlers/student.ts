@@ -1,6 +1,6 @@
 // Student read/write path: home, get_quiz, submit.
 import type { Ctx } from '../lib/context.ts';
-import type { AssignmentRow, AttemptFull, QuizFull } from '../lib/rows.ts';
+import type { AssignmentRow, AttemptFull, BookRow, QuizFull } from '../lib/rows.ts';
 import type { QuizRow } from '../lib/stats.ts';
 import type { Answer } from '../lib/scoring.ts';
 import { fetchAll, getSetting, isUniqueViolation, must } from '../lib/db.ts';
@@ -27,7 +27,7 @@ const meta = (q: QuizMeta) => ({ id: q.id, date: q.quiz_date, book: q.book, chap
 export async function home(ctx: Ctx) {
   const sid = await requireStudent(ctx.db, ctx.token);
   const { db, now } = ctx;
-  const [me, published, attempts, unlocks, assignments, boardOpen] = await Promise.all([
+  const [me, published, attempts, unlocks, assignments, boardOpen, openBooksRows] = await Promise.all([
     db.from('students').select('display_name').eq('id', sid).maybeSingle(),
     fetchAll<QuizMeta>((f, t) => db.from('quizzes').select(META).eq('status', 'published').order('quiz_date').range(f, t), 'home.quizzes'),
     fetchAll<{ quiz_id: string; correct: number; total: number; stars: number; created_at: string; student_id: string }>(
@@ -37,6 +37,7 @@ export async function home(ctx: Ctx) {
     db.from('quiz_unlocks').select('quiz_id').eq('student_id', sid),
     db.from('assignments').select('id, book, chapter, day, status, questions, submitted_at').eq('student_id', sid).order('day', { ascending: false }),
     getSetting<boolean>(db, 'leaderboard_public', false),
+    fetchAll<BookRow>((f, t) => db.from('books').select('id, name, testament, chapters, sort_order').eq('board_open', true).order('sort_order').range(f, t), 'home.openBooks'),
   ]);
   const meRow = must<{ display_name: string } | null>(me, 'home.me');
   if (!meRow) throw new ApiError('unauthorized', 'الحساب ده اتمسح. كلّم الخادم.', 401);
@@ -85,7 +86,14 @@ export async function home(ctx: Ctx) {
     ).map((r) => ({ rank: r.rank, name: r.name, stars: r.stars, streak: r.streak, me: r.id === sid }));
   }
 
-  return { me: { name: meRow.display_name }, today: now.date, stats, quizzes, assignments: myAssignments, board };
+  const openBooks = (openBooksRows ?? []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    testament: b.testament,
+    chapters: b.chapters,
+  }));
+
+  return { me: { name: meRow.display_name }, today: now.date, stats, quizzes, assignments: myAssignments, board, openBooks };
 }
 
 async function loadForStudent(ctx: Ctx, sid: string, quizId: string) {
@@ -172,4 +180,62 @@ export async function submit(ctx: Ctx) {
   if (isUniqueViolation(ins.error)) throw conflict('already_submitted', 'إنت حليت الاختبار ده قبل كده.');
   const attempt = must<AttemptFull>(ins, 'submit.insert');
   return doneView(quiz, attempt);
+}
+
+export async function bookBoard(ctx: Ctx) {
+  const sid = await requireStudent(ctx.db, ctx.token);
+  const bid = id(ctx.body, 'book_id');
+  const book = must<BookRow | null>(await ctx.db.from('books').select('*').eq('id', bid).maybeSingle(), 'bb.book');
+  if (!book) throw notFound('السفر ده مش موجود.');
+  if (!book.board_open) throw new ApiError('board_closed', 'ترتيب السفر ده مقفول دلوقتي.', 400);
+
+  const [quizzes, students] = await Promise.all([
+    fetchAll<{ id: string }>((f, t) => ctx.db.from('quizzes').select('id').or(`book_id.eq."${bid}",book.eq."${book.name}"`).eq('status', 'published').range(f, t), 'bb.quizzes'),
+    fetchAll<{ id: string; display_name: string }>((f, t) => ctx.db.from('students').select('id, display_name').range(f, t), 'bb.students'),
+  ]);
+
+  const quizIds = quizzes.map((q) => q.id);
+  let attempts: { student_id: string; quiz_id: string; stars: number }[] = [];
+  if (quizIds.length > 0) {
+    attempts = await fetchAll<{ student_id: string; quiz_id: string; stars: number }>(
+      (f, t) => ctx.db.from('attempts').select('student_id, quiz_id, stars').in('quiz_id', quizIds).range(f, t),
+      'bb.attempts',
+    );
+  }
+
+  const byStudent = new Map<string, { stars: number; done: Set<string> }>();
+  for (const s of students) byStudent.set(s.id, { stars: 0, done: new Set() });
+  for (const a of attempts) {
+    const entry = byStudent.get(a.student_id);
+    if (entry) {
+      entry.stars += a.stars;
+      entry.done.add(a.quiz_id);
+    }
+  }
+
+  const boardRows = rankBoard(
+    students.map((s) => {
+      const entry = byStudent.get(s.id) ?? { stars: 0, done: new Set() };
+      return { id: s.id, name: s.display_name, stars: entry.stars, streak: entry.done.size };
+    }),
+  ).map((r) => ({ rank: r.rank, name: r.name, stars: r.stars, streak: r.streak, me: r.id === sid }));
+
+  return {
+    book: { id: book.id, name: book.name, chapters: book.chapters },
+    board: boardRows,
+  };
+}
+
+export async function booksList(ctx: Ctx) {
+  const books = await fetchAll<BookRow>((f, t) => ctx.db.from('books').select('*').order('sort_order').range(f, t), 'student.booksList');
+  return {
+    books: books.map((b) => ({
+      id: b.id,
+      testament: b.testament,
+      name: b.name,
+      chapters: b.chapters,
+      sortOrder: b.sort_order,
+      boardOpen: b.board_open,
+    })),
+  };
 }

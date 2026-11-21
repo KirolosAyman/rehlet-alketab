@@ -22,6 +22,7 @@ const TABLES = {
   quiz_unlocks: { deleteFilter: 'quiz_id=not.is.null' },
   attempts: { deleteFilter: 'id=not.is.null' },
   assignments: { deleteFilter: 'id=not.is.null' },
+  books: { deleteFilter: 'id=not.is.null' },
   settings: { deleteFilter: 'key=not.is.null' },
   app_secrets: { deleteFilter: 'key=not.is.null' },
   rate_limits: { deleteFilter: 'key=not.is.null' },
@@ -34,6 +35,7 @@ const CLEAR_ORDER = [
   'assignments',
   'sessions',
   'quizzes',
+  'books',
   'students',
   'rate_limits',
   'settings',
@@ -43,6 +45,7 @@ const CLEAR_ORDER = [
 // Parents before children, so foreign keys resolve during import.
 const IMPORT_ORDER = [
   'students',
+  'books',
   'quizzes',
   'quiz_unlocks',
   'attempts',

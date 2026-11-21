@@ -13,6 +13,7 @@ import { QuizEditorPage } from './QuizEditorPage';
 import { QuizResultsPage } from './QuizResultsPage';
 import { UnlockPage } from './UnlockPage';
 import { AssignmentsPage } from './AssignmentsPage';
+import { BooksPage } from './BooksPage';
 import { StudentsPage } from './StudentsPage';
 import { SettingsPage } from './SettingsPage';
 
@@ -28,7 +29,7 @@ function Layout() {
     <Page wide actions={<Button variant="ghost" small onClick={logout}>{ar.logout}</Button>}>
       <NavTabs
         label={ar.admin.loginTitle}
-        links={[['/admin', t.dashboard, true], ['/admin/quizzes', t.quizzes], ['/admin/assignments', t.assignments], ['/admin/students', t.students], ['/admin/settings', t.settings]]}
+        links={[['/admin', t.dashboard, true], ['/admin/quizzes', t.quizzes], ['/admin/books', t.books], ['/admin/assignments', t.assignments], ['/admin/students', t.students], ['/admin/settings', t.settings]]}
       />
       <Outlet />
     </Page>
@@ -45,6 +46,8 @@ export default function AdminRoutes() {
         <Route path="quizzes/:id/edit" element={<QuizEditorPage />} />
         <Route path="quizzes/:id" element={<QuizResultsPage />} />
         <Route path="quizzes/:id/unlock" element={<UnlockPage />} />
+        <Route path="books" element={<BooksPage />} />
+        <Route path="books/:id" element={<BooksPage />} />
         <Route path="assignments" element={<AssignmentsPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="settings" element={<SettingsPage />} />

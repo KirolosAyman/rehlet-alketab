@@ -1,11 +1,11 @@
 // Admin actions. index.ts already verified the admin session; each handler re-checks (defense in depth).
 import type { Ctx } from '../lib/context.ts';
-import type { AttemptFull, QuizFull, StudentRow } from '../lib/rows.ts';
+import type { AttemptFull, BookRow, QuizFull, StudentRow } from '../lib/rows.ts';
 import type { EssayVerdict } from '../lib/scoring.ts';
 import { fetchAll, getSetting, isUniqueViolation, must, setSetting } from '../lib/db.ts';
 import { ApiError, badInput, conflict, notFound } from '../lib/http.ts';
 import { bool, date, id, ids, int, oneOf, optId, optTime, str } from '../lib/input.ts';
-import { normalizeUsername } from '../lib/normalize.ts';
+import { normalizeBookName, normalizeUsername } from '../lib/normalize.ts';
 import { validateQuestions } from '../lib/questions.ts';
 import { score } from '../lib/scoring.ts';
 import { studentStats } from '../lib/stats.ts';
@@ -191,6 +191,7 @@ export async function quizSave(ctx: Ctx) {
   const qid = optId(b, 'id');
   const quiz_date = date(b, 'quiz_date', 'تاريخ الاختبار');
   const opens_at = optTime(b, 'opens_at');
+  const book_id = optId(b, 'book_id');
   const book = str(b, 'book', 'اسم السفر', 100);
   const chapter = str(b, 'chapter', 'رقم الأصحاح', 50);
   const status = oneOf(b, 'status', ['draft', 'published'] as const);
@@ -207,7 +208,7 @@ export async function quizSave(ctx: Ctx) {
       throw conflict('day_full', `فيه اختبار منشور بالفعل في اليوم ده (${o.book} ${arDigits(o.chapter)}). احفظه مسودة أو غيّر التاريخ، أو زوّد العدد المسموح من الإعدادات.`);
     }
   }
-  const row = { quiz_date, opens_at, book, chapter, status, questions: v.questions };
+  const row = { quiz_date, opens_at, book, book_id, chapter, status, questions: v.questions };
   const res = qid
     ? await ctx.db.from('quizzes').update(row).eq('id', qid).select('id').maybeSingle()
     : await ctx.db.from('quizzes').insert(row).select('id').single();
@@ -378,4 +379,125 @@ export async function aiTest(ctx: Ctx) {
   } catch (e) {
     throw aiToApiError(e);
   }
+}
+
+// ---------------- books ----------------
+export async function booksList(ctx: Ctx) {
+  await requireAdmin(ctx.db, ctx.token);
+  const [books, quizzes] = await Promise.all([
+    fetchAll<BookRow>((f, t) => ctx.db.from('books').select('*').order('sort_order').range(f, t), 'booksList'),
+    fetchAll<{ id: string; book: string; book_id: string | null; status: string }>((f, t) => ctx.db.from('quizzes').select('id, book, book_id, status').range(f, t), 'books.quizzes'),
+  ]);
+  const quizCountMap = new Map<string, number>();
+  for (const q of quizzes) {
+    if (q.book_id) quizCountMap.set(q.book_id, (quizCountMap.get(q.book_id) ?? 0) + 1);
+    else if (q.book) quizCountMap.set(q.book, (quizCountMap.get(q.book) ?? 0) + 1);
+  }
+  return {
+    books: books.map((b) => ({
+      id: b.id,
+      testament: b.testament,
+      name: b.name,
+      chapters: b.chapters,
+      sortOrder: b.sort_order,
+      boardOpen: b.board_open,
+      quizCount: (quizCountMap.get(b.id) ?? 0) || (quizCountMap.get(b.name) ?? 0),
+    })),
+  };
+}
+
+export async function bookAdd(ctx: Ctx) {
+  await requireAdmin(ctx.db, ctx.token);
+  const b = ctx.body;
+  const testament = oneOf(b, 'testament', ['old', 'new'] as const);
+  const name = str(b, 'name', 'اسم السفر', 100).trim();
+  const chapters = int(b, 'chapters', 'عدد الأصحاحات', 1, 200);
+  const name_norm = normalizeBookName(name);
+
+  const existing = must<{ id: string }[]>(
+    await ctx.db.from('books').select('id').or(`name.eq."${name}",name_norm.eq."${name_norm}"`),
+    'bookAdd.existing',
+  );
+  if (existing.length) throw conflict('duplicate', 'السفر ده مضاف قبل كده.');
+
+  let sort_order = int(b, 'sort_order', 'الترتيب', 0, 1000, { optional: true });
+  if (sort_order === undefined || sort_order === null) {
+    const last = must<BookRow[]>(await ctx.db.from('books').select('sort_order').order('sort_order', { ascending: false }).limit(1), 'bookAdd.last');
+    sort_order = (last[0]?.sort_order ?? 0) + 1;
+  }
+  const ins = await ctx.db.from('books').insert({ testament, name, name_norm, chapters, sort_order, board_open: false }).select('id').single();
+  if (isUniqueViolation(ins.error)) throw conflict('duplicate', 'السفر ده مضاف قبل كده.');
+  const saved = must<{ id: string } | null>(ins, 'bookAdd.save');
+  return { id: saved!.id };
+}
+
+export async function bookToggleBoard(ctx: Ctx) {
+  await requireAdmin(ctx.db, ctx.token);
+  const bid = id(ctx.body, 'id');
+  const board_open = bool(ctx.body, 'board_open');
+  must(await ctx.db.from('books').update({ board_open }).eq('id', bid), 'bookToggleBoard');
+  return { ok: true, board_open };
+}
+
+export async function bookResults(ctx: Ctx) {
+  await requireAdmin(ctx.db, ctx.token);
+  const bid = id(ctx.body, 'id');
+  const book = must<BookRow | null>(await ctx.db.from('books').select('*').eq('id', bid).maybeSingle(), 'bookResults.book');
+  if (!book) throw notFound('السفر ده مش موجود.');
+
+  const [quizzes, students] = await Promise.all([
+    fetchAll<QuizLite>((f, t) => ctx.db.from('quizzes').select('id, quiz_date, book, book_id, chapter, opens_at, status, author_id, created_at, questions').or(`book_id.eq."${bid}",book.eq."${book.name}"`).range(f, t), 'br.quizzes'),
+    fetchAll<StudentRow>((f, t) => ctx.db.from('students').select('id, username, display_name').order('display_name').range(f, t), 'br.students'),
+  ]);
+
+  const publishedQuizzes = quizzes.filter((q) => q.status === 'published');
+  const quizIds = publishedQuizzes.map((q) => q.id);
+
+  let attempts: AttemptLite[] = [];
+  if (quizIds.length > 0) {
+    attempts = await fetchAll<AttemptLite>((f, t) => ctx.db.from('attempts').select('id, student_id, quiz_id, correct, total, stars, created_at, essay').in('quiz_id', quizIds).range(f, t), 'br.attempts');
+  }
+
+  const attemptsByStudent = new Map<string, AttemptLite[]>();
+  for (const a of attempts) {
+    const list = attemptsByStudent.get(a.student_id) ?? [];
+    list.push(a);
+    attemptsByStudent.set(a.student_id, list);
+  }
+
+  const studentResults = students.map((s) => {
+    const atts = attemptsByStudent.get(s.id) ?? [];
+    const completedQuizIds = new Set(atts.map((a) => a.quiz_id));
+    const chaptersDone = completedQuizIds.size;
+    const stars = atts.reduce((n, a) => n + a.stars, 0);
+    const correct = atts.reduce((n, a) => n + a.correct, 0);
+    const totalQuestions = atts.reduce((n, a) => n + a.total, 0);
+    const pct = Math.round((chaptersDone / (book.chapters || 1)) * 100);
+    const scorePct = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
+    return {
+      id: s.id,
+      name: s.display_name,
+      username: s.username,
+      chaptersDone,
+      totalChapters: book.chapters,
+      stars,
+      pct,
+      correct,
+      totalQuestions,
+      scorePct,
+    };
+  });
+
+  return {
+    book: {
+      id: book.id,
+      testament: book.testament,
+      name: book.name,
+      chapters: book.chapters,
+      sortOrder: book.sort_order,
+      boardOpen: book.board_open,
+    },
+    quizzes: quizzes.map((q) => ({ id: q.id, chapter: q.chapter, quiz_date: q.quiz_date, status: q.status })),
+    students: studentResults,
+  };
 }

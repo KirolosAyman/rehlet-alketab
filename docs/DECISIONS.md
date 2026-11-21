@@ -97,3 +97,12 @@ Spec gaps resolved with the simplest option. Flagged for the owner's review:
 13. **Server time zone:** time logic uses `Intl` with `Africa/Cairo`, so Egypt's daylight-saving time is handled automatically.
 14. **API unit tests also run on Node** (`npm run test:api`) through a tiny `Deno.test` shim, so no Deno install is needed. CI runs them under Deno as well.
 15. **Blank model name** in Settings means "use the default" (or `GEMINI_MODEL` if set).
+
+## D-014 · Bible books grouping, per-book leaderboards & results — APPROVED (2026-11-21)
+Owner requested organizing assessments and results by Bible books:
+1. **`books` table:** `(testament text check in ('old', 'new'), name text unique, name_norm text unique, chapters int, sort_order int, board_open boolean)`.
+2. **66 canonical books seeded:** 39 Old Testament + 27 New Testament with accurate Arabic names and chapter counts. The admin can add custom books.
+3. **Quizzes & assignments:** linked to books by `book_id` (and `book` name). Authors pick Testament → Book → Chapter instead of typing arbitrary text.
+4. **Leaderboard per book:** each book has a `board_open` toggle controlled by the admin. Students can pick between the global board (if open) and any open book to see rankings for that specific book.
+5. **Admin "الأسفار" tab:** dedicated view for Bible books, results per book (student name, chapters done / total, percentage, stars) with UTF-8 CSV export.
+6. **Levels and streaks stay global:** individual student streaks and level progressions remain global across all quizzes.

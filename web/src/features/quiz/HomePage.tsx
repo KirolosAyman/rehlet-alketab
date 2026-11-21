@@ -1,10 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ar } from '../../i18n/ar';
 import { api } from '../../lib/api';
 import { fmtDate, fmtShortDate, fmtTime, n } from '../../lib/format';
 import { studentToken } from '../../lib/session';
-import type { Home, HomeQuiz } from '../../lib/types';
+import type { BoardRow, Home, HomeQuiz } from '../../lib/types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState, ErrorBox, Loading } from '../../components/Feedback';
@@ -142,20 +143,75 @@ function RecordTab({ data }: { data: Home }) {
 }
 
 function BoardTab({ data }: { data: Home }) {
-  if (!data.board) return <EmptyState title={ar.home.boardHiddenTitle} text={ar.home.boardHidden} icon="🔒" />;
-  if (data.board.length === 0) return <EmptyState title={ar.home.boardEmpty} />;
+  const openBooks = data.openBooks ?? [];
+  const hasGlobal = !!data.board;
+  const hasAnyBoard = hasGlobal || openBooks.length > 0;
+
+  const defaultSelection = hasGlobal ? 'global' : (openBooks[0]?.id ?? '');
+  const [selected, setSelected] = useState<string>(defaultSelection);
+
+  const isBookSelected = selected !== 'global' && selected !== '';
+  const bookBoardQ = useQuery({
+    queryKey: ['book_board', selected],
+    queryFn: () => api<{ book: { id: string; name: string; chapters: number }; board: BoardRow[] }>('book_board', { book_id: selected }),
+    enabled: isBookSelected,
+  });
+
+  if (!hasAnyBoard) return <EmptyState title={ar.home.boardHiddenTitle} text={ar.home.boardHidden} icon="🔒" />;
+
+  const currentBoard = isBookSelected ? (bookBoardQ.data?.board ?? []) : (data.board ?? []);
+  const isLoadingBook = isBookSelected && bookBoardQ.isPending;
+
   return (
-    <Card className="p-0">
-      <ol className="divide-y divide-border">
-        {data.board.map((r, i) => (
-          <li key={i} aria-current={r.me || undefined} className={`flex items-center gap-3 px-4 py-3 ${r.me ? 'bg-star/15 font-bold' : ''}`}>
-            <span className="w-8 text-center text-lg">{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : n(r.rank)}</span>
-            <span className="flex-1">{r.name} {r.me && <span className="text-sm text-muted">{ar.home.you}</span>}</span>
-            <span className="text-sm text-muted">🔥 {n(r.streak)}</span>
-            <span className="flex items-center gap-1"><StarIcon size={16} />{n(r.stars)}</span>
-          </li>
-        ))}
-      </ol>
-    </Card>
+    <div className="flex flex-col gap-4">
+      {((hasGlobal && openBooks.length > 0) || openBooks.length > 1) && (
+        <div className="flex flex-wrap gap-2">
+          {hasGlobal && (
+            <Button
+              small
+              variant={selected === 'global' ? 'primary' : 'secondary'}
+              onClick={() => setSelected('global')}
+            >
+              {ar.home.globalBoard}
+            </Button>
+          )}
+          {openBooks.map((b) => (
+            <Button
+              key={b.id}
+              small
+              variant={selected === b.id ? 'primary' : 'secondary'}
+              onClick={() => setSelected(b.id)}
+            >
+              {ar.home.bookBoard(b.name)}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {isLoadingBook ? (
+        <Loading />
+      ) : bookBoardQ.isError ? (
+        <ErrorBox error={bookBoardQ.error} onRetry={() => bookBoardQ.refetch()} />
+      ) : currentBoard.length === 0 ? (
+        <EmptyState title={ar.home.boardEmpty} />
+      ) : (
+        <Card className="p-0">
+          <ol className="divide-y divide-border">
+            {currentBoard.map((r, i) => (
+              <li key={i} aria-current={r.me || undefined} className={`flex items-center gap-3 px-4 py-3 ${r.me ? 'bg-star/15 font-bold' : ''}`}>
+                <span className="w-8 text-center text-lg">{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : n(r.rank)}</span>
+                <span className="flex-1">{r.name} {r.me && <span className="text-sm text-muted">{ar.home.you}</span>}</span>
+                {isBookSelected ? (
+                  <span className="text-sm text-muted">📖 {n(r.streak)}</span>
+                ) : (
+                  <span className="text-sm text-muted">🔥 {n(r.streak)}</span>
+                )}
+                <span className="flex items-center gap-1"><StarIcon size={16} />{n(r.stars)}</span>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
+    </div>
   );
 }

@@ -9,3 +9,16 @@ export function normalizeUsername(s: string): string {
     .replace(/ى/g, 'ي')
     .replace(/ة/g, 'ه');
 }
+
+// Book name normalization for grouping and matching
+export function normalizeBookName(s: string): string {
+  return s
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/^(سفر|انجيل|رساله)\s+/, '');
+}

@@ -12,7 +12,7 @@ import { ConfirmButton } from '../../components/ConfirmButton';
 import { EmptyState, ErrorBox, Loading } from '../../components/Feedback';
 import { Input, Select } from '../../components/Field';
 import { Pill } from '../../components/Pill';
-import { useDashboard, useRefresh } from './useAdmin';
+import { useBooks, useDashboard, useRefresh } from './useAdmin';
 
 export function AssignmentsPage() {
   const d = useDashboard();
@@ -31,7 +31,35 @@ export function AssignmentsPage() {
 function CreateForm({ data }: { data: Dashboard }) {
   const t = ar.admin.assignments;
   const refresh = useRefresh();
-  const [f, setF] = useState({ student_id: '', book: data.quizzes[0]?.book ?? 'صموئيل الثاني', chapter: '', day: data.today });
+  const booksQ = useBooks();
+  const allBooks = booksQ.data?.books ?? [];
+  const initialBook = allBooks.find((b) => b.name === (data.quizzes[0]?.book ?? 'صموئيل الثاني')) ?? allBooks[0];
+  const [testament, setTestament] = useState<'old' | 'new'>(initialBook?.testament ?? 'old');
+  const [f, setF] = useState({
+    student_id: '',
+    book: initialBook?.name ?? (data.quizzes[0]?.book ?? 'صموئيل الثاني'),
+    book_id: initialBook?.id ?? null as string | null,
+    chapter: '',
+    day: data.today,
+  });
+
+  const testamentBooks = allBooks.filter((b) => b.testament === testament);
+  const selectedBook = allBooks.find((b) => b.name === f.book) ?? testamentBooks[0];
+  const maxChapters = selectedBook?.chapters ?? 50;
+
+  const onTestamentChange = (newTestament: 'old' | 'new') => {
+    setTestament(newTestament);
+    const first = allBooks.find((b) => b.testament === newTestament);
+    if (first) {
+      setF((curr) => ({ ...curr, book: first.name, book_id: first.id, chapter: '' }));
+    }
+  };
+
+  const onBookChange = (bookName: string) => {
+    const bk = allBooks.find((b) => b.name === bookName);
+    setF((curr) => ({ ...curr, book: bookName, book_id: bk?.id ?? null, chapter: '' }));
+  };
+
   const create = useMutation({ mutationFn: () => api('admin_assign_create', f), onSuccess: () => { refresh(); setF({ ...f, chapter: '' }); } });
   const submit = (e: FormEvent) => { e.preventDefault(); create.mutate(); };
   return (
@@ -43,8 +71,24 @@ function CreateForm({ data }: { data: Dashboard }) {
           {data.students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
         <Input label={t.day} type="date" value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} required />
-        <Input label={ar.admin.editor.book} value={f.book} maxLength={100} onChange={(e) => setF({ ...f, book: e.target.value })} required />
-        <Input label={ar.admin.editor.chapter} value={f.chapter} maxLength={50} onChange={(e) => setF({ ...f, chapter: e.target.value })} required />
+        <Select label={ar.admin.editor.testament} value={testament} onChange={(e) => onTestamentChange(e.target.value as 'old' | 'new')} required>
+          <option value="old">{ar.testaments.old}</option>
+          <option value="new">{ar.testaments.new}</option>
+        </Select>
+        <Select label={ar.admin.editor.book} value={f.book} onChange={(e) => onBookChange(e.target.value)} required>
+          {testamentBooks.map((b) => (
+            <option key={b.id} value={b.name}>{b.name}</option>
+          ))}
+          {!testamentBooks.some((b) => b.name === f.book) && f.book && (
+            <option value={f.book}>{f.book}</option>
+          )}
+        </Select>
+        <Select label={ar.admin.editor.chapter} value={f.chapter} onChange={(e) => setF({ ...f, chapter: e.target.value })} required className="sm:col-span-2">
+          <option value="">{ar.admin.editor.chooseChapter}</option>
+          {Array.from({ length: maxChapters }, (_, i) => String(i + 1)).map((ch) => (
+            <option key={ch} value={ch}>{ch}</option>
+          ))}
+        </Select>
         <Button type="submit" loading={create.isPending} className="sm:col-span-2">{t.add}</Button>
         {create.isError && <div className="sm:col-span-2"><ErrorBox error={create.error} /></div>}
       </form>

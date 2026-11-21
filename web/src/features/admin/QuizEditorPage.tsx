@@ -8,12 +8,12 @@ import type { Grading, Question } from '../../lib/types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ErrorBox, Loading, StatusMsg } from '../../components/Feedback';
-import { Input } from '../../components/Field';
+import { Input, Select } from '../../components/Field';
 import { QuestionEditor } from '../../components/QuestionEditor';
 import { AiPanel } from './AiPanel';
-import { useAdminQuiz, useDashboard, useRefresh } from './useAdmin';
+import { useAdminQuiz, useBooks, useDashboard, useRefresh } from './useAdmin';
 
-interface Form { quiz_date: string; opens_at: string; book: string; chapter: string; questions: Question[]; status: 'draft' | 'published' }
+interface Form { quiz_date: string; opens_at: string; book: string; book_id?: string | null; chapter: string; questions: Question[]; status: 'draft' | 'published' }
 
 export function QuizEditorPage() {
   const { id = '' } = useParams();
@@ -35,9 +35,40 @@ function Editor({ id, initial, author }: { id: string; initial: Form; author: st
   const t = ar.admin.editor;
   const nav = useNavigate();
   const refresh = useRefresh();
+  const booksQ = useBooks();
   const [f, setF] = useState<Form>(initial);
   const [msg, setMsg] = useState('');
   const edit = (x: Form) => { setF(x); setMsg(''); };
+
+  const allBooks = booksQ.data?.books ?? [];
+  const currentBook = allBooks.find((b) => b.name === f.book || (f.book_id && b.id === f.book_id));
+  const [testament, setTestament] = useState<'old' | 'new'>(currentBook?.testament ?? 'old');
+
+  useEffect(() => {
+    if (currentBook && currentBook.testament !== testament) {
+      setTestament(currentBook.testament);
+    }
+  }, [currentBook, testament]);
+
+  const testamentBooks = allBooks.filter((b) => b.testament === testament);
+  const selectedBook = currentBook ?? testamentBooks.find((b) => b.name === f.book) ?? testamentBooks[0];
+  const maxChapters = selectedBook?.chapters ?? 50;
+
+  const onTestamentChange = (newTestament: 'old' | 'new') => {
+    setTestament(newTestament);
+    const first = allBooks.find((b) => b.testament === newTestament);
+    if (first) {
+      edit({ ...f, book: first.name, book_id: first.id, chapter: '1' });
+    }
+  };
+
+  const onBookChange = (bookName: string) => {
+    const bk = allBooks.find((b) => b.name === bookName);
+    const chNum = parseInt(f.chapter, 10);
+    const maxCh = bk?.chapters ?? 50;
+    const nextCh = !chNum || chNum > maxCh ? '1' : f.chapter;
+    edit({ ...f, book: bookName, book_id: bk?.id ?? null, chapter: nextCh });
+  };
 
   const isDirty = JSON.stringify(f) !== JSON.stringify(initial);
   useEffect(() => {
@@ -71,8 +102,24 @@ function Editor({ id, initial, author }: { id: string; initial: Form; author: st
       <Card className="grid gap-3 sm:grid-cols-2">
         <Input label={t.date} type="date" value={f.quiz_date} onChange={(e) => edit({ ...f, quiz_date: e.target.value })} required />
         <Input label={t.opensAt} hint={t.opensAtHint} type="time" value={f.opens_at} onChange={(e) => edit({ ...f, opens_at: e.target.value })} />
-        <Input label={t.book} value={f.book} maxLength={100} className="font-scripture" onChange={(e) => edit({ ...f, book: e.target.value })} required />
-        <Input label={t.chapter} value={f.chapter} maxLength={50} inputMode="numeric" onChange={(e) => edit({ ...f, chapter: e.target.value })} required />
+        <Select label={t.testament} value={testament} onChange={(e) => onTestamentChange(e.target.value as 'old' | 'new')} required>
+          <option value="old">{ar.testaments.old}</option>
+          <option value="new">{ar.testaments.new}</option>
+        </Select>
+        <Select label={t.book} value={f.book} onChange={(e) => onBookChange(e.target.value)} required>
+          {testamentBooks.map((b) => (
+            <option key={b.id} value={b.name}>{b.name}</option>
+          ))}
+          {!testamentBooks.some((b) => b.name === f.book) && f.book && (
+            <option value={f.book}>{f.book}</option>
+          )}
+        </Select>
+        <Select label={t.chapter} value={f.chapter} onChange={(e) => edit({ ...f, chapter: e.target.value })} required>
+          <option value="">{t.chooseChapter}</option>
+          {Array.from({ length: maxChapters }, (_, i) => String(i + 1)).map((ch) => (
+            <option key={ch} value={ch}>{ch}</option>
+          ))}
+        </Select>
       </Card>
 
       <AiPanel book={f.book} chapter={f.chapter} onAdd={(qs) => setF((x) => ({ ...x, questions: [...x.questions, ...qs] }))} />

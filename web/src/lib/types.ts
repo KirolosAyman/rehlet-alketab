@@ -16,7 +16,8 @@ export interface QuizMeta { id: string; date: string; book: string; chapter: str
 export interface HomeQuiz extends QuizMeta { state: QuizState; result: Score | null }
 export interface MyAssignment { id: string; book: string; chapter: string; day: string; status: 'open' | 'submitted'; questions: Question[]; submittedAt: string | null }
 export interface BoardRow { rank: number; name: string; stars: number; streak: number; me: boolean }
-export interface Home { me: { name: string }; today: string; stats: Stats; quizzes: HomeQuiz[]; assignments: MyAssignment[]; board: BoardRow[] | null }
+export interface OpenBookMeta { id: string; name: string; testament: 'old' | 'new'; chapters: number }
+export interface Home { me: { name: string }; today: string; stats: Stats; quizzes: HomeQuiz[]; assignments: MyAssignment[]; board: BoardRow[] | null; openBooks?: OpenBookMeta[] }
 
 export interface ReviewItem {
   type: QType; q: string; options: string[]; answer: number; model: string | null; yours: Answer;
@@ -53,3 +54,32 @@ export interface AdminQuiz {
   unlocked: string[];
 }
 export interface AiSettings { model: string; defaultModel: string; hasKey: boolean; keyHint: string | null; keySource: 'settings' | 'env' | 'none'; maxPerDay: number }
+
+export interface Book {
+  id: string;
+  testament: 'old' | 'new';
+  name: string;
+  chapters: number;
+  sortOrder: number;
+  boardOpen: boolean;
+  quizCount?: number;
+}
+
+export interface AdminBookResultStudent {
+  id: string;
+  name: string;
+  username: string;
+  chaptersDone: number;
+  totalChapters: number;
+  stars: number;
+  pct: number;
+  correct: number;
+  totalQuestions: number;
+  scorePct: number;
+}
+
+export interface AdminBookResults {
+  book: Book;
+  quizzes: { id: string; chapter: string; quiz_date: string; status: 'draft' | 'published' }[];
+  students: AdminBookResultStudent[];
+}

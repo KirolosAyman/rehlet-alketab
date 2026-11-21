@@ -3,7 +3,7 @@ import type { Ctx } from '../lib/context.ts';
 import type { AssignmentRow } from '../lib/rows.ts';
 import { must } from '../lib/db.ts';
 import { ApiError, conflict, notFound } from '../lib/http.ts';
-import { bool, date, id, str } from '../lib/input.ts';
+import { bool, date, id, optId, str } from '../lib/input.ts';
 import { validateQuestions } from '../lib/questions.ts';
 import { requireAdmin, requireStudent } from '../lib/session.ts';
 import { addDays } from '../lib/time.ts';
@@ -37,6 +37,7 @@ export async function assignCreate(ctx: Ctx) {
   await requireAdmin(ctx.db, ctx.token);
   const row = {
     student_id: id(ctx.body, 'student_id'),
+    book_id: optId(ctx.body, 'book_id'),
     book: str(ctx.body, 'book', 'اسم السفر', 100),
     chapter: str(ctx.body, 'chapter', 'رقم الأصحاح', 50),
     day: date(ctx.body, 'day', 'يوم الكتابة'),
