@@ -13,7 +13,7 @@ import { QuestionEditor } from '../../components/QuestionEditor';
 import { AiPanel } from './AiPanel';
 import { useAdminQuiz, useBooks, useDashboard, useRefresh } from './useAdmin';
 
-interface Form { quiz_date: string; opens_at: string; book: string; book_id?: string | null; chapter: string; questions: Question[]; status: 'draft' | 'published' }
+interface Form { quiz_date: string; book: string; book_id?: string | null; chapter: string; questions: Question[]; status: 'draft' | 'published' }
 
 export function QuizEditorPage() {
   const { id = '' } = useParams();
@@ -26,8 +26,8 @@ export function QuizEditorPage() {
   const q = quiz.data?.quiz;
   const today = dash.data?.today ?? new Date().toISOString().slice(0, 10);
   const initial: Form = q
-    ? { quiz_date: q.quiz_date, opens_at: q.opens_at ?? '', book: q.book, chapter: q.chapter, questions: q.questions, status: q.status }
-    : { quiz_date: addDays(today, 1), opens_at: '', book: dash.data?.quizzes[0]?.book ?? 'صموئيل الثاني', chapter: '', questions: [], status: 'draft' };
+    ? { quiz_date: q.quiz_date, book: q.book, chapter: q.chapter, questions: q.questions, status: q.status }
+    : { quiz_date: addDays(today, 1), book: dash.data?.quizzes[0]?.book ?? 'صموئيل الثاني', chapter: '', questions: [], status: 'draft' };
   return <Editor key={id || 'new'} id={id} initial={initial} author={q?.author ?? null} />;
 }
 
@@ -82,7 +82,7 @@ function Editor({ id, initial, author }: { id: string; initial: Form; author: st
 
   const save = useMutation({
     mutationFn: (status: 'draft' | 'published') =>
-      api<{ id: string }>('admin_quiz_save', { id: id || null, ...f, opens_at: f.opens_at || null, status }),
+      api<{ id: string }>('admin_quiz_save', { id: id || null, ...f, status }),
     onSuccess: (r, status) => {
       refresh();
       setF((x) => ({ ...x, status }));
@@ -101,7 +101,6 @@ function Editor({ id, initial, author }: { id: string; initial: Form; author: st
 
       <Card className="grid gap-3 sm:grid-cols-2">
         <Input label={t.date} type="date" value={f.quiz_date} onChange={(e) => edit({ ...f, quiz_date: e.target.value })} required />
-        <Input label={t.opensAt} hint={t.opensAtHint} type="time" value={f.opens_at} onChange={(e) => edit({ ...f, opens_at: e.target.value })} />
         <Select label={t.testament} value={testament} onChange={(e) => onTestamentChange(e.target.value as 'old' | 'new')} required>
           <option value="old">{ar.testaments.old}</option>
           <option value="new">{ar.testaments.new}</option>

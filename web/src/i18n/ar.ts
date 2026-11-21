@@ -56,7 +56,6 @@ export const ar = {
     level: (name: string) => `مستوى: ${name}`,
     todayQuiz: 'اختبار النهارده',
     start: 'ابدأ الاختبار',
-    opensAt: (t: string) => `يفتح الساعة ${t}`,
     done: 'خلّصته ✓',
     review: 'شوف إجاباتك',
     author: 'إنت اللي كتبت أسئلة الاختبار ده 🌱',
@@ -122,7 +121,7 @@ export const ar = {
     submitYes: 'أيوه، ابعت',
     sent: 'الأسئلة اتبعتت للخادم. شكرًا على تعبك! 🌱',
     locked: 'الأسئلة دي اتبعتت خلاص. لو محتاج تعدّل، اطلب من الخادم.',
-    notFound: 'التكليف ده مش موجود أو لسه معاده مجاش.',
+    notFound: 'التكليف ده مش موجود.',
   },
 
   editor: {
@@ -200,6 +199,7 @@ export const ar = {
       chaptersDone: 'الأصحاحات المنجزة',
       totalChapters: 'إجمالي الأصحاحات',
       pct: 'النسبة المئوية',
+      score: 'درجة الاختبارات',
       exportCsv: 'تصدير النتائج (CSV)',
       noStudents: 'مفيش مخدومين مسجلين لسه.',
       quizzesCount: (x: number) => `${n(x)} اختبار`,

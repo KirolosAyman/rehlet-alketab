@@ -66,7 +66,6 @@ export async function home(ctx: Ctx) {
   const stats = studentStats(sid, published, attempts, now.date);
 
   const myAssignments = must<Omit<AssignmentRow, 'student_id' | 'quiz_id' | 'created_at'>[]>(assignments, 'home.assign')
-    .filter((x) => x.day <= now.date)
     .map((x) => ({ id: x.id, book: x.book, chapter: x.chapter, day: x.day, status: x.status, questions: x.questions, submittedAt: x.submitted_at }));
 
   let board = null;
@@ -113,12 +112,10 @@ async function loadForStudent(ctx: Ctx, sid: string, quizId: string) {
   return { quiz, attempt, state };
 }
 
-function stateError(state: QuizState, opensAt: string | null): ApiError {
+function stateError(state: QuizState): ApiError {
   switch (state) {
     case 'author':
       return new ApiError('author', 'إنت اللي كتبت أسئلة الاختبار ده، فمش هتمتحنه. شكرًا على تعبك! 🌱', 403);
-    case 'waiting':
-      return new ApiError('waiting', `الاختبار هيفتح الساعة ${arDigits(opensAt ?? '')} النهارده.`, 403);
     case 'missed':
       return new ApiError('missed', 'معاد الاختبار ده فات. اطلب من الخادم يفتحهولك.', 403);
     default:
@@ -139,7 +136,7 @@ export async function getQuiz(ctx: Ctx) {
   const sid = await requireStudent(ctx.db, ctx.token);
   const { quiz, attempt, state } = await loadForStudent(ctx, sid, id(ctx.body, 'quiz_id'));
   if (state === 'done' && attempt) return doneView(quiz, attempt);
-  if (state !== 'open') throw stateError(state, normalizeTime(quiz.opens_at));
+  if (state !== 'open') throw stateError(state);
   return { state: 'open', quiz: meta(quiz), questions: quiz.questions.map(toPublic) };
 }
 
@@ -149,7 +146,7 @@ export async function submit(ctx: Ctx) {
   const sid = await requireStudent(ctx.db, ctx.token);
   const { quiz, state } = await loadForStudent(ctx, sid, id(ctx.body, 'quiz_id'));
   if (state === 'done') throw conflict('already_submitted', 'إنت حليت الاختبار ده قبل كده. تقدر تشوف إجاباتك من "سجلي".');
-  if (state !== 'open') throw stateError(state, normalizeTime(quiz.opens_at));
+  if (state !== 'open') throw stateError(state);
 
   const qs = quiz.questions;
   const raw = ctx.body.answers;

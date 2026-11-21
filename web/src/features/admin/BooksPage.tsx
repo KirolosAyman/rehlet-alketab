@@ -207,12 +207,13 @@ function BookResultsView({ bookId }: { bookId: string }) {
   const { book, students, quizzes } = q.data;
 
   const exportCsv = () => {
-    const headers = ['اسم الطالب', 'الأصحاحات المنجزة', 'إجمالي الأصحاحات', 'النسبة المئوية', 'النجوم'];
+    const headers = ['اسم الطالب', 'الأصحاحات المنجزة', 'إجمالي الأصحاحات', 'نسبة الإنجاز', 'درجة الاختبارات', 'النجوم'];
     const rows = students.map((s) => [
       `"${s.name.replace(/"/g, '""')}"`,
       s.chaptersDone,
       s.totalChapters,
       `${s.pct}%`,
+      `${s.scorePct}% (${s.correct}/${s.totalQuestions})`,
       s.stars,
     ]);
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(',')), ].join('\r\n');
@@ -266,6 +267,7 @@ function BookResultsView({ bookId }: { bookId: string }) {
                 <th>{ar.admin.table.name}</th>
                 <th>{t.chaptersDone}</th>
                 <th>{t.pct}</th>
+                <th>{t.score}</th>
                 <th>{ar.admin.table.stars}</th>
               </tr>
             </thead>
@@ -285,6 +287,7 @@ function BookResultsView({ bookId }: { bookId: string }) {
                       <span className="text-xs font-semibold text-muted">{n(s.pct)}%</span>
                     </div>
                   </td>
+                  <td>{s.totalQuestions > 0 ? `${n(s.scorePct)}% (${n(s.correct)} / ${n(s.totalQuestions)})` : '—'}</td>
                   <td>
                     <span className="font-semibold text-primary">⭐ {n(s.stars)}</span>
                   </td>

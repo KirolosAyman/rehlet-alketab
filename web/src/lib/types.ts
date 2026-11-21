@@ -1,7 +1,7 @@
 // Client-side mirrors of the API response shapes.
 export type QType = 'mcq' | 'tf' | 'fill' | 'essay';
 export type Grading = 'ai' | 'manual';
-export type QuizState = 'done' | 'waiting' | 'open' | 'missed' | 'author';
+export type QuizState = 'done' | 'open' | 'missed' | 'author';
 export type Answer = number | string | null;
 
 export interface Question { type: QType; q: string; options: string[]; answer: number; model?: string; grading?: Grading }

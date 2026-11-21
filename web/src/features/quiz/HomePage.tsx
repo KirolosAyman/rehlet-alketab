@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ar } from '../../i18n/ar';
 import { api } from '../../lib/api';
-import { fmtDate, fmtShortDate, fmtTime, n } from '../../lib/format';
+import { fmtDate, fmtShortDate, n } from '../../lib/format';
 import { studentToken } from '../../lib/session';
 import type { BoardRow, Home, HomeQuiz } from '../../lib/types';
 import { Button } from '../../components/Button';
@@ -74,7 +74,6 @@ function TodayTab({ data }: { data: Home }) {
           <p className="text-sm text-muted">{ar.home.todayQuiz}</p>
           <QuizTitle q={q} />
           {q.state === 'open' && <Link to={`/quiz/${q.id}`} className="btn btn-primary w-full">{ar.home.start}</Link>}
-          {q.state === 'waiting' && <Pill>{ar.home.opensAt(fmtTime(q.opensAt))}</Pill>}
           {q.state === 'author' && <p className="text-muted">{ar.home.author}</p>}
           {q.state === 'done' && q.result && (
             <div className="flex flex-wrap items-center justify-between gap-2">

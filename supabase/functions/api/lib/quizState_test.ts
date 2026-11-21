@@ -12,10 +12,10 @@ const s = (p: Partial<QuizStateInput>) => quizState({ ...base, ...p });
 test('state: done wins over everything', () => assertEquals(s({ hasAttempt: true, status: 'draft' }), 'done'));
 test('state: draft → hidden', () => assertEquals(s({ status: 'draft' }), 'hidden'));
 test('state: author', () => assertEquals(s({ authorId: 's1' }), 'author'));
-test('state: today, no opening time → open', () => assertEquals(s({}), 'open'));
-test('state: just before opens_at → waiting', () => assertEquals(s({ opensAt: '19:00:00', now: { date: '2026-11-18', time: '18:59' } }), 'waiting'));
-test('state: exactly at opens_at → open', () => assertEquals(s({ opensAt: '19:00', now: { date: '2026-11-18', time: '19:00' } }), 'open'));
-test('state: after opens_at → open', () => assertEquals(s({ opensAt: '19:00', now: { date: '2026-11-18', time: '19:01' } }), 'open'));
+test('state: today, open from midnight through the end of the day', () => {
+  assertEquals(s({ opensAt: '19:00:00', now: { date: '2026-11-18', time: '00:00' } }), 'open');
+  assertEquals(s({ opensAt: '19:00:00', now: { date: '2026-11-18', time: '23:59' } }), 'open');
+});
 test('state: past + unlocked → open', () => assertEquals(s({ quizDate: '2026-11-17', unlocked: true }), 'open'));
 test('state: past, not unlocked → missed', () => assertEquals(s({ quizDate: '2026-11-17' }), 'missed'));
 test('state: future → hidden', () => assertEquals(s({ quizDate: '2026-11-19' }), 'hidden'));

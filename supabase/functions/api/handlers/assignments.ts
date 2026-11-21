@@ -15,7 +15,6 @@ export async function assignSave(ctx: Ctx) {
   const a = must<AssignmentRow | null>(await ctx.db.from('assignments').select('*').eq('id', aid).eq('student_id', sid).maybeSingle(), 'as.load');
   if (!a) throw notFound('التكليف ده مش موجود.');
   if (a.status !== 'open') throw conflict('locked', 'الأسئلة اتبعتت للخادم خلاص. لو محتاج تعدّل، اطلب منه يفتحهالك.');
-  if (a.day > ctx.now.date) throw new ApiError('too_early', 'لسه معاد كتابة الأسئلة مجاش.', 403);
   // Students cannot choose grading mode; strip it (D-010 → defaults to 'ai', admin can change).
   const raw = Array.isArray(ctx.body.questions)
     ? ctx.body.questions.map((q) => (q && typeof q === 'object' ? { ...(q as Record<string, unknown>), grading: undefined } : q))
@@ -72,7 +71,7 @@ export async function assignToQuiz(ctx: Ctx) {
   if (!v.ok) throw new ApiError('invalid_question', v.message, 400);
   const quiz_date = ctx.body.quiz_date ? date(ctx.body, 'quiz_date') : addDays(a.day, 1);
   const quiz = must<{ id: string }>(
-    await ctx.db.from('quizzes').insert({ quiz_date, book: a.book, chapter: a.chapter, status: 'draft', author_id: a.student_id, questions: v.questions }).select('id').single(),
+    await ctx.db.from('quizzes').insert({ quiz_date, book: a.book, book_id: a.book_id, chapter: a.chapter, status: 'draft', author_id: a.student_id, questions: v.questions }).select('id').single(),
     'atq.insert',
   );
   const linked = must(await ctx.db.from('assignments').update({ quiz_id: quiz.id }).eq('id', aid).is('quiz_id', null).select('id').maybeSingle(), 'atq.link');

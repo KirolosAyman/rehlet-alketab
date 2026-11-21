@@ -4,7 +4,7 @@ import type { AttemptFull, BookRow, QuizFull, StudentRow } from '../lib/rows.ts'
 import type { EssayVerdict } from '../lib/scoring.ts';
 import { fetchAll, getSetting, isUniqueViolation, must, setSetting } from '../lib/db.ts';
 import { ApiError, badInput, conflict, notFound } from '../lib/http.ts';
-import { bool, date, id, ids, int, oneOf, optId, optTime, str } from '../lib/input.ts';
+import { bool, date, id, ids, int, oneOf, optId, str } from '../lib/input.ts';
 import { normalizeBookName, normalizeUsername } from '../lib/normalize.ts';
 import { validateQuestions } from '../lib/questions.ts';
 import { score } from '../lib/scoring.ts';
@@ -190,7 +190,6 @@ export async function quizSave(ctx: Ctx) {
   const b = ctx.body;
   const qid = optId(b, 'id');
   const quiz_date = date(b, 'quiz_date', 'تاريخ الاختبار');
-  const opens_at = optTime(b, 'opens_at');
   const book_id = optId(b, 'book_id');
   const book = str(b, 'book', 'اسم السفر', 100);
   const chapter = str(b, 'chapter', 'رقم الأصحاح', 50);
@@ -208,7 +207,7 @@ export async function quizSave(ctx: Ctx) {
       throw conflict('day_full', `فيه اختبار منشور بالفعل في اليوم ده (${o.book} ${arDigits(o.chapter)}). احفظه مسودة أو غيّر التاريخ، أو زوّد العدد المسموح من الإعدادات.`);
     }
   }
-  const row = { quiz_date, opens_at, book, book_id, chapter, status, questions: v.questions };
+  const row = { quiz_date, opens_at: null, book, book_id, chapter, status, questions: v.questions };
   const res = qid
     ? await ctx.db.from('quizzes').update(row).eq('id', qid).select('id').maybeSingle()
     : await ctx.db.from('quizzes').insert(row).select('id').single();
